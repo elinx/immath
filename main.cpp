@@ -52,6 +52,13 @@ static void glfw_error_callback(int error, const char *description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
+static ImVec2 window_size = {1280, 720};
+static void glfw_window_size_callback(GLFWwindow *, int width, int height)
+{
+    window_size.x = width;
+    window_size.y = height;
+}
+
 int main(int, char **)
 {
     // Setup window
@@ -83,11 +90,12 @@ int main(int, char **)
 #endif
 
     // Create window with graphics context
-    GLFWwindow *window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(window_size.x, window_size.y, "ImMath", NULL, NULL);
     if (window == NULL)
         return 1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
+    glfwSetWindowSizeCallback(window, glfw_window_size_callback);
 
     // Initialize OpenGL loader
 #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
@@ -167,43 +175,97 @@ int main(int, char **)
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
+        // if (show_demo_window)
+        //     ImGui::ShowDemoWindow(&show_demo_window);
 
-        ImPlot::ShowDemoWindow();
+        // ImPlot::ShowDemoWindow();
+
+        {
+            static float xmin = -7;
+            static float xmax = 7;
+            static float ymin = -4;
+            static float ymax = 4;
+            static int left_size = 200;
+            static int vsplitter_width = 2;
+
+            ImGui::SetNextWindowPos({0, 0});
+            ImGui::SetNextWindowSize(window_size);
+            ImGui::Begin("math", 0, ImGuiWindowFlags_NoDecoration);
+
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{0, 0});
+            ImGui::SetNextWindowPos({0, 0});
+            ImGui::BeginChild("Settings", {(float)left_size - vsplitter_width, window_size.y});
+
+            static const float speed = 0.01;
+            ImGui::DragFloat("xmin", &xmin, speed, -1000, xmax - speed);
+            ImGui::Separator();
+            ImGui::DragFloat("xmax", &xmax, speed, xmin + speed, 1000);
+            ImGui::Separator();
+            ImGui::DragFloat("ymin", &ymin, speed, -1000, ymax - speed);
+            ImGui::Separator();
+            ImGui::DragFloat("ymax", &ymax, speed, ymin + speed, 1000);
+            ImGui::Separator();
+            ImGui::EndChild();
+
+            ImVector<ImVec2> y;
+            for (float x = xmin; x < xmax; x += speed)
+            {
+                y.push_back({x, x * x});
+            }
+
+            ImGui::SameLine();
+            ImGui::Button("vsplitter", ImVec2(vsplitter_width, window_size.y));
+            if (ImGui::IsItemActive())
+                left_size += ImGui::GetIO().MouseDelta.x;
+
+            ImGui::SetNextWindowPos({(float)left_size, 0});
+            ImGui::BeginChild("Math Plot", {0, window_size.y});
+
+            ImPlot::SetNextPlotLimits(xmin, xmax, ymin, ymax);
+            if (ImPlot::BeginPlot("f(x)", NULL, NULL, {window_size.x - 100, window_size.y}))
+            {
+                ImPlot::PlotLine("##(fx)", &y[0].x, &y[0].y, y.size(), 0, sizeof(ImVec2));
+                ImPlot::EndPlot();
+            }
+
+            ImGui::EndChild();
+            ImGui::PopStyleVar();
+
+            ImGui::End();
+        }
 
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
+        // {
+        //     static float f = 0.0f;
+        //     static int counter = 0;
 
-            ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!" and append into it.
+        //     ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!" and append into it.
 
-            ImGui::Text("This is some useful text.");          // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window); // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
+        //     ImGui::Text("This is some useful text.");          // Display some text (you can use a format strings too)
+        //     ImGui::Checkbox("Demo Window", &show_demo_window); // Edit bools storing our window open/close state
+        //     ImGui::Checkbox("Another Window", &show_another_window);
 
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);             // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float *)&clear_color); // Edit 3 floats representing a color
+        //     ImGui::SliderFloat("float", &f, 0.0f, 1.0f);             // Edit 1 float using a slider from 0.0f to 1.0f
+        //     ImGui::ColorEdit3("clear color", (float *)&clear_color); // Edit 3 floats representing a color
 
-            if (ImGui::Button("Button")) // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
+        //     if (ImGui::Button("Button")) // Buttons return true when clicked (most widgets return true when edited/activated)
+        //         counter++;
+        //     ImGui::SameLine();
+        //     ImGui::Text("counter = %d", counter);
 
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-            ImGui::End();
-        }
+        //     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        //     ImGui::End();
+        // }
 
         // 3. Show another simple window.
-        if (show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window); // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
-        }
+        // if (show_another_window)
+        // {
+        //     ImGui::Begin("Another Window", &show_another_window); // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+        //     ImGui::Text("Hello from another window!");
+        //     if (ImGui::Button("Close Me"))
+        //         show_another_window = false;
+        //     ImGui::End();
+        // }
 
         // Rendering
         ImGui::Render();
