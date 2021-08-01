@@ -8,6 +8,9 @@
 #include "imgui_impl_opengl3.h"
 #include "implot.h"
 #include <stdio.h>
+#include <algorithm>
+#include <exprtk.hpp>
+#include <string>
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -57,6 +60,29 @@ static void glfw_window_size_callback(GLFWwindow *, int width, int height)
 {
     window_size.x = width;
     window_size.y = height;
+}
+
+template <typename T>
+const exprtk::expression<T> &parse_expr(const std::string &expr_str, T &x)
+{
+    typedef exprtk::symbol_table<T> symbol_table_t;
+    typedef exprtk::expression<T> expression_t;
+    typedef exprtk::parser<T> parser_t;
+
+    // const std::string expression_string =
+    //     "clamp(-1.0,sin(2 * pi * x) + cos(x / 2 * pi),+1.0)";
+
+    symbol_table_t symbol_table;
+    symbol_table.add_variable("x", x);
+    symbol_table.add_constants();
+
+    expression_t expression;
+    expression.register_symbol_table(symbol_table);
+
+    parser_t parser;
+    parser.compile(expr_str, expression);
+
+    return expression;
 }
 
 int main(int, char **)
@@ -196,21 +222,57 @@ int main(int, char **)
             ImGui::SetNextWindowPos({0, 0});
             ImGui::BeginChild("Settings", {(float)left_size - vsplitter_width, window_size.y});
 
+            float x;
+            static char formula[128] = "clamp(-1.0,sin(2 * pi * x) + cos(x / 2 * pi),+1.0)";
+            ImGui::InputText("##formula", formula, IM_ARRAYSIZE(formula));
+            std::string expr_str(formula);
+
+            typedef exprtk::symbol_table<float> symbol_table_t;
+            typedef exprtk::expression<float> expression_t;
+            typedef exprtk::parser<float> parser_t;
+
+            // const std::string expression_string =
+            //     "clamp(-1.0,sin(2 * pi * x) + cos(x / 2 * pi),+1.0)";
+
+            symbol_table_t symbol_table;
+            symbol_table.add_variable("x", x);
+            symbol_table.add_constants();
+
+            expression_t expression;
+            expression.register_symbol_table(symbol_table);
+
+            parser_t parser;
+            parser.compile(expr_str, expression);
+
+            // const exprtk::expression<float> &expression = parse_expr<float>(expr_str, x);
+
             static const float speed = 0.01;
-            ImGui::DragFloat("xmin", &xmin, speed, -1000, xmax - speed);
-            ImGui::Separator();
-            ImGui::DragFloat("xmax", &xmax, speed, xmin + speed, 1000);
-            ImGui::Separator();
-            ImGui::DragFloat("ymin", &ymin, speed, -1000, ymax - speed);
-            ImGui::Separator();
-            ImGui::DragFloat("ymax", &ymax, speed, ymin + speed, 1000);
-            ImGui::Separator();
+            if (ImGui::CollapsingHeader("Range", ImGuiTreeNodeFlags_None))
+            {
+                ImGui::DragFloat("xmin", &xmin, speed, -1000, xmax - speed);
+                ImGui::Separator();
+                ImGui::DragFloat("xmax", &xmax, speed, xmin + speed, 1000);
+                ImGui::Separator();
+                ImGui::DragFloat("ymin", &ymin, speed, -1000, ymax - speed);
+                ImGui::Separator();
+                ImGui::DragFloat("ymax", &ymax, speed, ymin + speed, 1000);
+                ImGui::Separator();
+            }
+            if (ImGui::CollapsingHeader("Axis", ImGuiTreeNodeFlags_None))
+            {
+            }
+
             ImGui::EndChild();
 
             ImVector<ImVec2> y;
-            for (float x = xmin; x < xmax; x += speed)
+            for (x = xmin; x < xmax; x += speed)
             {
-                y.push_back({x, x * x});
+                // float res = std::clamp(x * x, ymin, ymax);
+                float res = expression.value();
+                if (res >= ymin && res <= ymax)
+                {
+                    y.push_back({x, res});
+                }
             }
 
             ImGui::SameLine();
@@ -222,9 +284,12 @@ int main(int, char **)
             ImGui::BeginChild("Math Plot", {0, window_size.y});
 
             ImPlot::SetNextPlotLimits(xmin, xmax, ymin, ymax);
-            if (ImPlot::BeginPlot("f(x)", NULL, NULL, {window_size.x - 100, window_size.y}))
+            if (ImPlot::BeginPlot("f(x)", NULL, NULL, {window_size.x - left_size, window_size.y}))
             {
-                ImPlot::PlotLine("##(fx)", &y[0].x, &y[0].y, y.size(), 0, sizeof(ImVec2));
+                if (!y.empty())
+                {
+                    ImPlot::PlotLine("##(fx)", &y[0].x, &y[0].y, y.size(), 0, sizeof(ImVec2));
+                }
                 ImPlot::EndPlot();
             }
 

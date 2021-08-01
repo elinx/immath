@@ -28,3 +28,6 @@ add_library(implot
 )
 
 target_include_directories(implot PUBLIC implot imgui)
+
+add_library(exprtk INTERFACE)
+target_include_directories(exprtk INTERFACE exprtk)
