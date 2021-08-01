@@ -225,12 +225,17 @@ int main(int, char **)
             float x;
             static char formula[128] = "clamp(-1.0,sin(2 * pi * x) + cos(x / 2 * pi),+1.0)";
             std::string expr_str(formula);
+            static ImVec4 line_color = ImVec4(114.0f / 255.0f, 144.0f / 255.0f, 154.0f / 255.0f, 200.0f / 255.0f);
 
             if (ImGui::CollapsingHeader("formula1"))
             {
                 ImGui::PushItemWidth(left_size);
                 ImGui::InputText("##formula", formula, IM_ARRAYSIZE(formula));
                 ImGui::PopItemWidth();
+                ImGui::Text(" line color:");
+                ImGui::SameLine();
+                ImGui::Spacing();
+                ImGui::ColorEdit3("color", (float *)&line_color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
             }
 
             typedef exprtk::symbol_table<float> symbol_table_t;
@@ -248,7 +253,7 @@ int main(int, char **)
             parser.compile(expr_str, expression);
 
             static const float speed = 0.1;
-            if (ImGui::CollapsingHeader("Range", ImGuiTreeNodeFlags_None))
+            if (ImGui::CollapsingHeader("Axis", ImGuiTreeNodeFlags_None))
             {
                 ImGui::DragFloat("xmin", &xmin, speed, -1000, xmax - speed);
                 ImGui::Separator();
@@ -258,9 +263,6 @@ int main(int, char **)
                 ImGui::Separator();
                 ImGui::DragFloat("ymax", &ymax, speed, ymin + speed, 1000);
                 ImGui::Separator();
-            }
-            if (ImGui::CollapsingHeader("Axis", ImGuiTreeNodeFlags_None))
-            {
             }
 
             ImGui::EndChild();
@@ -284,6 +286,7 @@ int main(int, char **)
             ImGui::BeginChild("Math Plot", {0, window_size.y});
 
             ImPlot::SetNextPlotLimits(xmin, xmax, ymin, ymax);
+            ImPlot::PushStyleColor(ImPlotCol_Line, line_color);
             if (ImPlot::BeginPlot("##f(x)", NULL, NULL, {window_size.x - left_size, window_size.y}))
             {
                 if (!y.empty())
@@ -297,6 +300,7 @@ int main(int, char **)
                 ymax = limits.Y.Max;
                 ImPlot::EndPlot();
             }
+            ImPlot::PopStyleColor();
 
             ImGui::EndChild();
             ImGui::PopStyleVar();
