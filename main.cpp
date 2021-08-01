@@ -232,10 +232,7 @@ int main(int, char **)
                 ImGui::PushItemWidth(left_size);
                 ImGui::InputText("##formula", formula, IM_ARRAYSIZE(formula));
                 ImGui::PopItemWidth();
-                ImGui::Text(" line color:");
-                ImGui::SameLine();
-                ImGui::Spacing();
-                ImGui::ColorEdit3("color", (float *)&line_color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+                ImGui::ColorEdit3("line color", (float *)&line_color, ImGuiColorEditFlags_NoInputs);
             }
 
             typedef exprtk::symbol_table<float> symbol_table_t;
