@@ -224,15 +224,18 @@ int main(int, char **)
 
             float x;
             static char formula[128] = "clamp(-1.0,sin(2 * pi * x) + cos(x / 2 * pi),+1.0)";
-            ImGui::InputText("##formula", formula, IM_ARRAYSIZE(formula));
             std::string expr_str(formula);
+
+            if (ImGui::CollapsingHeader("formula1"))
+            {
+                ImGui::PushItemWidth(left_size);
+                ImGui::InputText("##formula", formula, IM_ARRAYSIZE(formula));
+                ImGui::PopItemWidth();
+            }
 
             typedef exprtk::symbol_table<float> symbol_table_t;
             typedef exprtk::expression<float> expression_t;
             typedef exprtk::parser<float> parser_t;
-
-            // const std::string expression_string =
-            //     "clamp(-1.0,sin(2 * pi * x) + cos(x / 2 * pi),+1.0)";
 
             symbol_table_t symbol_table;
             symbol_table.add_variable("x", x);
@@ -244,9 +247,7 @@ int main(int, char **)
             parser_t parser;
             parser.compile(expr_str, expression);
 
-            // const exprtk::expression<float> &expression = parse_expr<float>(expr_str, x);
-
-            static const float speed = 0.01;
+            static const float speed = 0.1;
             if (ImGui::CollapsingHeader("Range", ImGuiTreeNodeFlags_None))
             {
                 ImGui::DragFloat("xmin", &xmin, speed, -1000, xmax - speed);
@@ -267,7 +268,6 @@ int main(int, char **)
             ImVector<ImVec2> y;
             for (x = xmin; x < xmax; x += speed)
             {
-                // float res = std::clamp(x * x, ymin, ymax);
                 float res = expression.value();
                 if (res >= ymin && res <= ymax)
                 {
@@ -284,12 +284,17 @@ int main(int, char **)
             ImGui::BeginChild("Math Plot", {0, window_size.y});
 
             ImPlot::SetNextPlotLimits(xmin, xmax, ymin, ymax);
-            if (ImPlot::BeginPlot("f(x)", NULL, NULL, {window_size.x - left_size, window_size.y}))
+            if (ImPlot::BeginPlot("##f(x)", NULL, NULL, {window_size.x - left_size, window_size.y}))
             {
                 if (!y.empty())
                 {
                     ImPlot::PlotLine("##(fx)", &y[0].x, &y[0].y, y.size(), 0, sizeof(ImVec2));
                 }
+                ImPlotLimits limits = ImPlot::GetPlotLimits();
+                xmin = limits.X.Min;
+                xmax = limits.X.Max;
+                ymin = limits.Y.Min;
+                ymax = limits.Y.Max;
                 ImPlot::EndPlot();
             }
 
